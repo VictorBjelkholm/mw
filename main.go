@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"time"
 )
 
 type User struct {
@@ -106,9 +107,17 @@ func applicationJsonFromName(name string) io.Reader {
 	return body
 }
 
+func handleError(err error) {
+	if err != nil {
+		fmt.Println("Something went very wrong")
+		panic(err)
+	}
+}
+
 func main() {
 
-	api := "http://192.168.33.10:3000"
+	//api := "http://192.168.33.10:3000"
+	api := "http://127.0.0.1:3000"
 
 	createUserFolder()
 
@@ -134,10 +143,9 @@ func main() {
 				body := userJsonFromParams(username, password)
 
 				_, err := http.Post(api+"/users/register", "application/json", body)
-				if err != nil {
-					fmt.Println("Something went very wrong")
-					panic(err)
-				}
+
+				handleError(err)
+
 				fmt.Println("Your account have been created and you have been logged in as '" + username + "'")
 			},
 		},
@@ -153,11 +161,12 @@ func main() {
 				body := userJsonFromParams(username, password)
 
 				response, err := http.Post(api+"/users/login", "application/json", body)
-				if err != nil {
-					fmt.Println("Something went very wrong")
-					panic(err)
-				}
+
+				handleError(err)
+
 				contents, err := ioutil.ReadAll(response.Body)
+
+				handleError(err)
 
 				token := tokenFromJson(contents)
 				saveTokenToDisk(*token)
@@ -190,22 +199,19 @@ func main() {
 
 				body := applicationJsonFromName(applicationName)
 
-				fmt.Println(body)
-
 				req, reqErr := http.NewRequest("POST", api+"/applications/init", body)
-				if reqErr != nil {
-					panic(reqErr)
-				}
+
+				handleError(reqErr)
+
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("x-token", token)
 
-				client := &http.Client{}
+				timeout := time.Duration(5 * time.Second)
+
+				client := &http.Client{Timeout: timeout}
 				response, err := client.Do(req)
 
-				if err != nil {
-					fmt.Println("Something went very wrong")
-					panic(err)
-				}
+				handleError(err)
 
 				if response.StatusCode == 201 {
 					fmt.Println("Created application '" + applicationName + "'")
